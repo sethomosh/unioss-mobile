@@ -11,6 +11,6 @@ import com.example.unioss_mobile.ui.theme.AccentCyan
 @Composable
 fun AlertsScreen() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Alerts", color = AccentCyan)
+        Text("Towers", color = AccentCyan)
     }
 }

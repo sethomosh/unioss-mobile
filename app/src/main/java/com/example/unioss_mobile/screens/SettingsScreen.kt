@@ -9,8 +9,8 @@ import androidx.compose.ui.Modifier
 import com.example.unioss_mobile.ui.theme.AccentCyan
 
 @Composable
-fun SignalsScreen() {
+fun SettingsScreen() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Signals", color = AccentCyan)
+        Text("Alerts", color = AccentCyan)
     }
 }

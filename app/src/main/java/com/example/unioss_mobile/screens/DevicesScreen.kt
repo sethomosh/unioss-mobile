@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import com.example.unioss_mobile.ui.theme.AccentCyan
 
 @Composable
-fun TrafficScreen() {
+fun DevicesScreen() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text("Traffic", color = AccentCyan)
     }

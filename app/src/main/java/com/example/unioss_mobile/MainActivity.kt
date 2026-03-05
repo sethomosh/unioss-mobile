@@ -31,10 +31,10 @@ class MainActivity : ComponentActivity() {
                         ) {
                             val items = listOf(
                                 Triple(Screen.Dashboard, Icons.Default.Home, "Dashboard"),
-                                Triple(Screen.Traffic, Icons.Default.ArrowForward, "Traffic"),
-                                Triple(Screen.Signals, Icons.Default.Star, "Signals"),
-                                Triple(Screen.Towers, Icons.Default.LocationOn, "Towers"),
-                                Triple(Screen.Alerts, Icons.Default.Notifications, "Alerts")
+                                Triple(Screen.Devices, Icons.Default.Devices, "Devices"),
+                                Triple(Screen.Towers, Icons.Default.CellTower, "Towers"),
+                                Triple(Screen.Alerts, Icons.Default.Notifications, "Alerts"),
+                                Triple(Screen.Settings, Icons.Default.Settings, "Settings")
                             )
                             items.forEach { (screen, icon, label) ->
                                 NavigationBarItem(
