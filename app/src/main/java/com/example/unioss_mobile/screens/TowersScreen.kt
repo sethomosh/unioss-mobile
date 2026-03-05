@@ -18,6 +18,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.unioss_mobile.ui.theme.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.example.unioss_mobile.utils.useAutoRefresh
 
 data class ClientDevice(
     val name: String,
@@ -83,6 +88,13 @@ val mockTowers = listOf(
 
 @Composable
 fun TowersScreen() {
+    var lastRefreshed by remember { mutableStateOf("Just now") }
+    var refreshCount by remember { mutableStateOf(0) }
+
+    useAutoRefresh(intervalMs = 10_000L) {
+        refreshCount++
+        lastRefreshed = "Updated ${refreshCount * 10}s ago"
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -97,7 +109,7 @@ fun TowersScreen() {
             color = AccentCyan
         )
         Text(
-            text = "${mockTowers.count { it.status == "up" }} active · ${mockTowers.sumOf { it.clients.size }} total clients",
+            text = "${mockTowers.count { it.status == "up" }} active · ${mockTowers.sumOf { it.clients.size }} total clients · $lastRefreshed",
             fontSize = 13.sp,
             color = TextSecondary
         )

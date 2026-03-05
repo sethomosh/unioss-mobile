@@ -17,6 +17,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.unioss_mobile.ui.theme.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.example.unioss_mobile.utils.useAutoRefresh
 
 data class Device(
     val name: String,
@@ -47,6 +52,13 @@ val mockDevices = listOf(
 @Composable
 fun DevicesScreen() {
     val searchQuery = remember { mutableStateOf("") }
+    var lastRefreshed by remember { mutableStateOf("Just now") }
+    var refreshCount by remember { mutableStateOf(0) }
+
+    useAutoRefresh(intervalMs = 10_000L) {
+        refreshCount++
+        lastRefreshed = "Updated ${refreshCount * 10}s ago"
+    }
     val filteredDevices = mockDevices.filter {
         it.name.contains(searchQuery.value, ignoreCase = true) ||
                 it.ip.contains(searchQuery.value, ignoreCase = true) ||
@@ -67,7 +79,7 @@ fun DevicesScreen() {
             color = AccentCyan
         )
         Text(
-            text = "${mockDevices.count { it.status == "up" }} online · ${mockDevices.count { it.status == "down" }} offline",
+            text = "${mockDevices.count { it.status == "up" }} online · ${mockDevices.count { it.status == "down" }} offline · $lastRefreshed",
             fontSize = 13.sp,
             color = TextSecondary
         )

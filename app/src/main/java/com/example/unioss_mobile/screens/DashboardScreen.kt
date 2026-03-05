@@ -9,6 +9,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,9 +22,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.unioss_mobile.ui.theme.*
+import com.example.unioss_mobile.utils.useAutoRefresh
 
 @Composable
 fun DashboardScreen() {
+    var lastRefreshed by remember { mutableStateOf("Just now") }
+    var refreshCount by remember { mutableStateOf(0) }
+
+    useAutoRefresh(intervalMs = 10_000L) {
+        refreshCount++
+        lastRefreshed = "Updated ${refreshCount * 10}s ago"
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -42,7 +55,7 @@ fun DashboardScreen() {
                     color = AccentCyan
                 )
                 Text(
-                    text = "Network Monitor",
+                    text = lastRefreshed,
                     fontSize = 13.sp,
                     color = TextSecondary
                 )
