@@ -17,53 +17,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.unioss_mobile.data.model.AlertResponse
 import com.example.unioss_mobile.ui.theme.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import com.example.unioss_mobile.utils.useAutoRefresh
-
-
-
-data class AlertItem(
-    val id: Int,
-    val device: String,
-    val message: String,
-    val severity: String,
-    val status: String,
-    val time: String
-)
-
-val mockAlerts = listOf(
-    AlertItem(1, "AirMax-Tower-01", "RSSI dropped below -85 dBm on LiteBeam-02", "CRITICAL", "active", "2 min ago"),
-    AlertItem(2, "SXT-Tower-03", "Tower device unreachable - connection lost", "CRITICAL", "active", "18 min ago"),
-    AlertItem(3, "AirMax-Tower-02", "Signal degradation on MikroTik LHG-01", "WARNING", "active", "45 min ago"),
-    AlertItem(4, "LiteBeam-01", "High memory usage at 87%", "WARNING", "active", "1 hr ago"),
-    AlertItem(5, "Aironet-Tower-04", "CPU spike detected at 91%", "WARNING", "active", "2 hr ago"),
-    AlertItem(6, "PowerBeam-01", "Signal restored - RSSI nominal", "INFO", "cleared", "3 hr ago"),
-    AlertItem(7, "MikroTik LHG-02", "Device back online after outage", "INFO", "cleared", "5 hr ago"),
-    AlertItem(8, "NanoBeam-01", "Intermittent packet loss detected", "WARNING", "cleared", "8 hr ago")
-)
+import com.example.unioss_mobile.viewmodel.AlertsViewModel
 
 @Composable
-fun AlertsScreen() {
+fun AlertsScreen(viewModel: AlertsViewModel = viewModel()) {
+    val alerts by viewModel.alerts.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
     val tabs = listOf("All", "Critical", "Warning", "Cleared")
     var selectedTab by remember { mutableStateOf(0) }
 
+    LaunchedEffect(Unit) { viewModel.fetchAlerts() }
+    useAutoRefresh(intervalMs = 10_000L) { viewModel.fetchAlerts() }
+
     val filteredAlerts = when (selectedTab) {
-        1 -> mockAlerts.filter { it.severity == "CRITICAL" }
-        2 -> mockAlerts.filter { it.severity == "WARNING" }
-        3 -> mockAlerts.filter { it.status == "cleared" }
-        else -> mockAlerts
-    }
-
-    var lastRefreshed by remember { mutableStateOf("Just now") }
-    var refreshCount by remember { mutableStateOf(0) }
-
-    useAutoRefresh(intervalMs = 10_000L) {
-        refreshCount++
-        lastRefreshed = "Updated ${refreshCount * 10}s ago"
+        1 -> alerts.filter { it.severity.uppercase() == "CRITICAL" }
+        2 -> alerts.filter { it.severity.uppercase() == "WARNING" }
+        3 -> alerts.filter { it.acknowledged }
+        else -> alerts
     }
 
     Column(
@@ -72,35 +47,22 @@ fun AlertsScreen() {
             .background(BackgroundDark)
             .padding(16.dp)
     ) {
-        // Header
+        Text("Alerts", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = AccentCyan)
         Text(
-            text = "Alerts",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = AccentCyan
-        )
-        Text(
-            text = "${mockAlerts.count { it.status == "active" }} active · ${mockAlerts.count { it.status == "cleared" }} cleared · $lastRefreshed",
+            text = "${alerts.count { !it.acknowledged }} active · ${alerts.count { it.acknowledged }} cleared",
             fontSize = 13.sp,
             color = TextSecondary
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Filter Tabs
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             tabs.forEachIndexed { index, label ->
                 val isSelected = selectedTab == index
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(
-                            if (isSelected) AccentCyan.copy(alpha = 0.15f)
-                            else CardDark
-                        )
+                        .background(if (isSelected) AccentCyan.copy(alpha = 0.15f) else CardDark)
                         .clickable { selectedTab = index }
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
@@ -116,21 +78,38 @@ fun AlertsScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Alerts List
-        Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            if (filteredAlerts.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No alerts found", color = TextSecondary, fontSize = 14.sp)
+        when {
+            isLoading && alerts.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AccentCyan)
                 }
-            } else {
-                filteredAlerts.forEach { alert ->
-                    AlertCard(alert = alert)
+            }
+            error != null && alerts.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.WifiOff, contentDescription = null, tint = AccentRed, modifier = Modifier.size(48.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Backend unreachable", color = AccentRed, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text("Check Settings → Backend URL", color = TextSecondary, fontSize = 13.sp)
+                    }
+                }
+            }
+            else -> {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (filteredAlerts.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No alerts found", color = TextSecondary, fontSize = 14.sp)
+                        }
+                    } else {
+                        filteredAlerts.forEach { alert -> LiveAlertCard(alert = alert) }
+                    }
                 }
             }
         }
@@ -138,13 +117,13 @@ fun AlertsScreen() {
 }
 
 @Composable
-fun AlertCard(alert: AlertItem) {
-    val severityColor = when (alert.severity) {
+fun LiveAlertCard(alert: AlertResponse) {
+    val severityColor = when (alert.severity.uppercase()) {
         "CRITICAL" -> AccentRed
         "WARNING" -> AccentOrange
         else -> AccentCyan
     }
-    val isCleared = alert.status == "cleared"
+    val isCleared = alert.acknowledged
 
     Row(
         modifier = Modifier
@@ -154,7 +133,6 @@ fun AlertCard(alert: AlertItem) {
             .padding(14.dp),
         verticalAlignment = Alignment.Top
     ) {
-        // Severity indicator bar
         Box(
             modifier = Modifier
                 .width(4.dp)
@@ -162,9 +140,7 @@ fun AlertCard(alert: AlertItem) {
                 .clip(RoundedCornerShape(2.dp))
                 .background(if (isCleared) TextSecondary else severityColor)
         )
-
         Spacer(modifier = Modifier.width(12.dp))
-
         Column(modifier = Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -178,51 +154,29 @@ fun AlertCard(alert: AlertItem) {
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        text = alert.severity,
+                        text = alert.severity.uppercase(),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (isCleared) severityColor.copy(alpha = 0.5f) else severityColor
                     )
                 }
-                Text(
-                    text = alert.time,
-                    fontSize = 11.sp,
-                    color = TextSecondary
-                )
+                Text(text = alert.timestamp, fontSize = 11.sp, color = TextSecondary)
             }
-
             Spacer(modifier = Modifier.height(6.dp))
-
             Text(
-                text = alert.device,
+                text = alert.device_ip ?: "Unknown",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = if (isCleared) TextSecondary else TextPrimary
             )
-
             Spacer(modifier = Modifier.height(3.dp))
-
-            Text(
-                text = alert.message,
-                fontSize = 12.sp,
-                color = TextSecondary
-            )
-
+            Text(text = alert.message ?: "", fontSize = 12.sp, color = TextSecondary)
             if (isCleared) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = AccentGreen.copy(alpha = 0.6f),
-                        modifier = Modifier.size(12.dp)
-                    )
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = AccentGreen.copy(alpha = 0.6f), modifier = Modifier.size(12.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Resolved",
-                        fontSize = 11.sp,
-                        color = AccentGreen.copy(alpha = 0.6f)
-                    )
+                    Text("Resolved", fontSize = 11.sp, color = AccentGreen.copy(alpha = 0.6f))
                 }
             }
         }

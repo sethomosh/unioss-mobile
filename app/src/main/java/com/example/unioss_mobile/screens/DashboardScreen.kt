@@ -8,11 +8,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,18 +17,27 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.unioss_mobile.data.model.AlertResponse
 import com.example.unioss_mobile.ui.theme.*
 import com.example.unioss_mobile.utils.useAutoRefresh
+import com.example.unioss_mobile.viewmodel.DashboardViewModel
 
 @Composable
-fun DashboardScreen() {
-    var lastRefreshed by remember { mutableStateOf("Just now") }
-    var refreshCount by remember { mutableStateOf(0) }
+fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
+    val devices by viewModel.devices.collectAsState()
+    val alerts by viewModel.alerts.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
-    useAutoRefresh(intervalMs = 10_000L) {
-        refreshCount++
-        lastRefreshed = "Updated ${refreshCount * 10}s ago"
-    }
+    LaunchedEffect(Unit) { viewModel.fetchData() }
+    useAutoRefresh(intervalMs = 10_000L) { viewModel.fetchData() }
+
+    val onlineCount = devices.count { it.online }
+    val offlineCount = devices.count { !it.online }
+    val criticalAlerts = alerts.filter { it.severity.uppercase() == "CRITICAL" && !it.acknowledged }
+    val warningAlerts = alerts.filter { it.severity.uppercase() == "WARNING" && !it.acknowledged }
+    val totalInbound = devices.sumOf { d -> d.interfaces.sumOf { it.inbound_kbps } }
+    val totalOutbound = devices.sumOf { d -> d.interfaces.sumOf { it.outbound_kbps } }
 
     Column(
         modifier = Modifier
@@ -41,21 +46,15 @@ fun DashboardScreen() {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        // Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
+                Text("UniOSS", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = AccentCyan)
                 Text(
-                    text = "UniOSS",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AccentCyan
-                )
-                Text(
-                    text = lastRefreshed,
+                    text = if (isLoading) "Refreshing..." else "Live data",
                     fontSize = 13.sp,
                     color = TextSecondary
                 )
@@ -67,152 +66,67 @@ fun DashboardScreen() {
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(AccentGreen)
-                    )
+                    Box(modifier = Modifier.size(8.dp).clip(RoundedCornerShape(50)).background(AccentGreen))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Live",
-                        color = AccentGreen,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Text("Live", color = AccentGreen, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Device Health
-        Text(
-            text = "Device Health",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary
-        )
+        Text("Device Health", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
         Spacer(modifier = Modifier.height(12.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            StatCard(
-                modifier = Modifier.weight(1f),
-                title = "Total Devices",
-                value = "12",
-                icon = Icons.Default.Devices,
-                accentColor = AccentCyan
-            )
-            StatCard(
-                modifier = Modifier.weight(1f),
-                title = "Online",
-                value = "9",
-                icon = Icons.Default.CheckCircle,
-                accentColor = AccentGreen
-            )
-            StatCard(
-                modifier = Modifier.weight(1f),
-                title = "Offline",
-                value = "3",
-                icon = Icons.Default.Cancel,
-                accentColor = AccentRed
-            )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatCard(modifier = Modifier.weight(1f), title = "Total", value = "${devices.size}", icon = Icons.Default.Devices, accentColor = AccentCyan)
+            StatCard(modifier = Modifier.weight(1f), title = "Online", value = "$onlineCount", icon = Icons.Default.CheckCircle, accentColor = AccentGreen)
+            StatCard(modifier = Modifier.weight(1f), title = "Offline", value = "$offlineCount", icon = Icons.Default.Cancel, accentColor = AccentRed)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Bandwidth Summary
-        Text(
-            text = "Bandwidth Usage",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary
-        )
+        Text("Bandwidth Usage", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
         Spacer(modifier = Modifier.height(12.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            StatCard(
-                modifier = Modifier.weight(1f),
-                title = "Inbound",
-                value = "24 Mbps",
-                icon = Icons.Default.ArrowDownward,
-                accentColor = AccentCyan
-            )
-            StatCard(
-                modifier = Modifier.weight(1f),
-                title = "Outbound",
-                value = "18 Mbps",
-                icon = Icons.Default.ArrowUpward,
-                accentColor = AccentGreen
-            )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatCard(modifier = Modifier.weight(1f), title = "Inbound", value = "${"%.1f".format(totalInbound / 1000)} Mbps", icon = Icons.Default.ArrowDownward, accentColor = AccentCyan)
+            StatCard(modifier = Modifier.weight(1f), title = "Outbound", value = "${"%.1f".format(totalOutbound / 1000)} Mbps", icon = Icons.Default.ArrowUpward, accentColor = AccentGreen)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Alerts Summary
-        Text(
-            text = "Active Alerts",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary
-        )
+        Text("Active Alerts", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
         Spacer(modifier = Modifier.height(12.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            StatCard(
-                modifier = Modifier.weight(1f),
-                title = "Critical",
-                value = "1",
-                icon = Icons.Default.Error,
-                accentColor = AccentRed
-            )
-            StatCard(
-                modifier = Modifier.weight(1f),
-                title = "Warnings",
-                value = "3",
-                icon = Icons.Default.Warning,
-                accentColor = AccentOrange
-            )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatCard(modifier = Modifier.weight(1f), title = "Critical", value = "${criticalAlerts.size}", icon = Icons.Default.Error, accentColor = AccentRed)
+            StatCard(modifier = Modifier.weight(1f), title = "Warnings", value = "${warningAlerts.size}", icon = Icons.Default.Warning, accentColor = AccentOrange)
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-        AlertRow(
-            severity = "CRITICAL",
-            message = "RSRP below threshold on Tower-01",
-            time = "2 min ago",
-            color = AccentRed
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        AlertRow(
-            severity = "WARNING",
-            message = "High traffic on eth0",
-            time = "15 min ago",
-            color = AccentOrange
-        )
+        if (criticalAlerts.isNotEmpty() || warningAlerts.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            (criticalAlerts.take(2) + warningAlerts.take(2)).forEach { alert ->
+                AlertRow(
+                    severity = alert.severity.uppercase(),
+                    message = alert.message ?: "",
+                    time = alert.timestamp ?: "",
+                    color = if (alert.severity.uppercase() == "CRITICAL") AccentRed else AccentOrange
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Network Health
-        Text(
-            text = "Network Health",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary
-        )
+        Text("Network Health", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
         Spacer(modifier = Modifier.height(12.dp))
         StatusRow("SNMP Poller", "Running", AccentGreen)
         Spacer(modifier = Modifier.height(8.dp))
         StatusRow("Database", "Connected", AccentGreen)
         Spacer(modifier = Modifier.height(8.dp))
-        StatusRow("API Backend", "Online", AccentGreen)
+        StatusRow("API Backend", if (devices.isNotEmpty()) "Online" else "Checking...", if (devices.isNotEmpty()) AccentGreen else AccentOrange)
         Spacer(modifier = Modifier.height(8.dp))
         StatusRow("Signal Health", "Nominal", AccentCyan)
+
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -237,20 +151,10 @@ fun StatCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(text = title, fontSize = 11.sp, color = TextSecondary)
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = accentColor,
-                    modifier = Modifier.size(16.dp)
-                )
+                Icon(imageVector = icon, contentDescription = title, tint = accentColor, modifier = Modifier.size(16.dp))
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = value,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = accentColor
-            )
+            Text(text = value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = accentColor)
         }
     }
 }
@@ -294,12 +198,7 @@ fun StatusRow(service: String, status: String, color: Color) {
     ) {
         Text(text = service, fontSize = 14.sp, color = TextPrimary)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(color)
-            )
+            Box(modifier = Modifier.size(8.dp).clip(RoundedCornerShape(50)).background(color))
             Spacer(modifier = Modifier.width(6.dp))
             Text(text = status, fontSize = 13.sp, color = color)
         }

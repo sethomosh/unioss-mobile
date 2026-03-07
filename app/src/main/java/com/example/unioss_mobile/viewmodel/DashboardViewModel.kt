@@ -1,15 +1,18 @@
 package com.example.unioss_mobile.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.unioss_mobile.data.model.AlertResponse
 import com.example.unioss_mobile.data.model.DeviceResponse
 import com.example.unioss_mobile.data.network.RetrofitClient
+import com.example.unioss_mobile.utils.AppPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class DashboardViewModel : ViewModel() {
+class DashboardViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _devices = MutableStateFlow<List<DeviceResponse>>(emptyList())
     val devices: StateFlow<List<DeviceResponse>> = _devices
@@ -28,6 +31,8 @@ class DashboardViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
+                val url = AppPreferences.getBackendUrl(getApplication()).first()
+                RetrofitClient.baseUrl = if (url.endsWith("/")) url else "$url/"
                 _devices.value = RetrofitClient.getInstance().getDevices()
                 _alerts.value = RetrofitClient.getInstance().getAlerts()
             } catch (e: Exception) {
