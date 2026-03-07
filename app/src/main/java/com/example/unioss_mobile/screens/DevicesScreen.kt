@@ -16,53 +16,27 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.unioss_mobile.data.model.DeviceResponse
 import com.example.unioss_mobile.ui.theme.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import com.example.unioss_mobile.utils.useAutoRefresh
-
-data class Device(
-    val name: String,
-    val ip: String,
-    val type: String,
-    val status: String,
-    val cpu: Int,
-    val memory: Int,
-    val uptime: String
-)
-
-val mockDevices = listOf(
-    Device("Ubiquiti AirMax-Tower-01", "192.168.1.10", "Tower AP", "up", 23, 41, "12d 4h"),
-    Device("Ubiquiti AirMax-Tower-02", "192.168.1.11", "Tower AP", "up", 31, 55, "12d 4h"),
-    Device("MikroTik SXT-Tower-03", "192.168.1.12", "Tower AP", "down", 0, 0, "0d 0h"),
-    Device("Cisco Aironet-Tower-04", "192.168.1.13", "Tower AP", "up", 18, 39, "9d 2h"),
-    Device("Ubiquiti LiteBeam-01", "192.168.2.10", "Remote Client", "up", 12, 28, "5d 2h"),
-    Device("Ubiquiti LiteBeam-02", "192.168.2.11", "Remote Client", "up", 18, 33, "5d 2h"),
-    Device("Ubiquiti PowerBeam-01", "192.168.2.12", "Remote Client", "up", 9, 22, "3d 6h"),
-    Device("Ubiquiti PowerBeam-02", "192.168.2.13", "Remote Client", "down", 0, 0, "0d 0h"),
-    Device("Ubiquiti NanoBeam-01", "192.168.2.14", "Remote Client", "up", 15, 37, "1d 8h"),
-    Device("Ubiquiti NanoBeam-02", "192.168.2.15", "Remote Client", "up", 21, 44, "8d 1h"),
-    Device("MikroTik LHG-01", "192.168.2.16", "Remote Client", "up", 7, 19, "2d 3h"),
-    Device("MikroTik LHG-02", "192.168.2.17", "Remote Client", "down", 0, 0, "0d 0h"),
-    Device("Cisco Aironet-Client-01", "192.168.2.18", "Remote Client", "up", 11, 31, "4d 7h")
-)
+import com.example.unioss_mobile.viewmodel.DevicesViewModel
 
 @Composable
-fun DevicesScreen() {
+fun DevicesScreen(viewModel: DevicesViewModel = viewModel()) {
+    val devices by viewModel.devices.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
     val searchQuery = remember { mutableStateOf("") }
-    var lastRefreshed by remember { mutableStateOf("Just now") }
-    var refreshCount by remember { mutableStateOf(0) }
 
-    useAutoRefresh(intervalMs = 10_000L) {
-        refreshCount++
-        lastRefreshed = "Updated ${refreshCount * 10}s ago"
-    }
-    val filteredDevices = mockDevices.filter {
-        it.name.contains(searchQuery.value, ignoreCase = true) ||
-                it.ip.contains(searchQuery.value, ignoreCase = true) ||
-                it.type.contains(searchQuery.value, ignoreCase = true)
+    LaunchedEffect(Unit) { viewModel.fetchDevices() }
+
+    useAutoRefresh(intervalMs = 10_000L) { viewModel.fetchDevices() }
+
+    val filteredDevices = devices.filter {
+        (it.hostname?.contains(searchQuery.value, ignoreCase = true) == true) ||
+                (it.device_ip?.contains(searchQuery.value, ignoreCase = true) == true) ||
+                (it.vendor?.contains(searchQuery.value, ignoreCase = true) == true)
     }
 
     Column(
@@ -79,7 +53,7 @@ fun DevicesScreen() {
             color = AccentCyan
         )
         Text(
-            text = "${mockDevices.count { it.status == "up" }} online · ${mockDevices.count { it.status == "down" }} offline · $lastRefreshed",
+            text = "${devices.count { it.online }} online · ${devices.count { !it.online }} offline",
             fontSize = 13.sp,
             color = TextSecondary
         )
@@ -108,22 +82,41 @@ fun DevicesScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Device List
-        Column(
-            modifier = Modifier.verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            filteredDevices.forEach { device ->
-                DeviceCard(device = device)
+        when {
+            isLoading && devices.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AccentCyan)
+                }
+            }
+            error != null && devices.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.WifiOff, contentDescription = null, tint = AccentRed, modifier = Modifier.size(48.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Backend unreachable", color = AccentRed, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text("Check Settings → Backend URL", color = TextSecondary, fontSize = 13.sp)
+                    }
+                }
+            }
+            else -> {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    filteredDevices.forEach { device ->
+                        LiveDeviceCard(device = device)
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun DeviceCard(device: Device) {
-    val statusColor = if (device.status == "up") AccentGreen else AccentRed
-    val statusLabel = if (device.status == "up") "UP" else "DOWN"
+fun LiveDeviceCard(device: DeviceResponse) {
+    val statusColor = if (device.online) AccentGreen else AccentRed
+    val statusLabel = if (device.online) "UP" else "DOWN"
 
     Column(
         modifier = Modifier
@@ -132,7 +125,6 @@ fun DeviceCard(device: Device) {
             .background(CardDark)
             .padding(14.dp)
     ) {
-        // Top row - name and status
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -140,7 +132,7 @@ fun DeviceCard(device: Device) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = if (device.type == "Tower AP") Icons.Default.CellTower else Icons.Default.Router,
+                    imageVector = Icons.Default.Router,
                     contentDescription = null,
                     tint = AccentCyan,
                     modifier = Modifier.size(18.dp)
@@ -148,13 +140,13 @@ fun DeviceCard(device: Device) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = device.name,
+                        text = device.hostname ?: "Unknown",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary
                     )
                     Text(
-                        text = device.ip,
+                        text = "${device.vendor ?: "Unknown"} · ${device.device_ip ?: "N/A"}",
                         fontSize = 11.sp,
                         color = TextSecondary
                     )
@@ -175,10 +167,8 @@ fun DeviceCard(device: Device) {
             }
         }
 
-        if (device.status == "up") {
+        if (device.online) {
             Spacer(modifier = Modifier.height(12.dp))
-
-            // Metrics row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -186,20 +176,20 @@ fun DeviceCard(device: Device) {
                 MetricBar(
                     modifier = Modifier.weight(1f),
                     label = "CPU",
-                    value = device.cpu,
+                    value = device.cpu_pct.toInt(),
                     color = when {
-                        device.cpu > 80 -> AccentRed
-                        device.cpu > 60 -> AccentOrange
+                        device.cpu_pct > 80 -> AccentRed
+                        device.cpu_pct > 60 -> AccentOrange
                         else -> AccentGreen
                     }
                 )
                 MetricBar(
                     modifier = Modifier.weight(1f),
                     label = "Memory",
-                    value = device.memory,
+                    value = device.memory_pct.toInt(),
                     color = when {
-                        device.memory > 80 -> AccentRed
-                        device.memory > 60 -> AccentOrange
+                        device.memory_pct > 80 -> AccentRed
+                        device.memory_pct > 60 -> AccentOrange
                         else -> AccentCyan
                     }
                 )
@@ -207,29 +197,32 @@ fun DeviceCard(device: Device) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Uptime
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.Timer,
-                    contentDescription = null,
-                    tint = TextSecondary,
-                    modifier = Modifier.size(12.dp)
-                )
+                Icon(Icons.Default.Timer, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(12.dp))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Uptime: ${device.uptime}",
+                    text = "Uptime: ${formatUptime(device.uptime_seconds)}",
                     fontSize = 11.sp,
                     color = TextSecondary
                 )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = device.type,
-                    fontSize = 11.sp,
-                    color = AccentCyan.copy(alpha = 0.7f)
-                )
+                device.signal?.let {
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "RSSI: ${it.rssi_dbm} dBm",
+                        fontSize = 11.sp,
+                        color = AccentCyan.copy(alpha = 0.8f)
+                    )
+                }
             }
         }
     }
+}
+
+fun formatUptime(seconds: Double): String {
+    val totalSeconds = seconds.toLong()
+    val days = totalSeconds / 86400
+    val hours = (totalSeconds % 86400) / 3600
+    return "${days}d ${hours}h"
 }
 
 @Composable

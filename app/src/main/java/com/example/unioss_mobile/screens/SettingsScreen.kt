@@ -13,16 +13,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.unioss_mobile.ui.theme.*
+import com.example.unioss_mobile.utils.AppPreferences
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen() {
-    var baseUrl by remember { mutableStateOf("http://10.0.2.2:8000") }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val savedUrl by AppPreferences.getBackendUrl(context).collectAsState(initial = AppPreferences.DEFAULT_URL)
+    var baseUrl by remember(savedUrl) { mutableStateOf(savedUrl) }
     var refreshInterval by remember { mutableStateOf("10s") }
     var connectionStatus by remember { mutableStateOf("untested") }
+    var saveConfirmed by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -31,24 +39,12 @@ fun SettingsScreen() {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        // Header
-        Text(
-            text = "Settings",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = AccentCyan
-        )
-        Text(
-            text = "Configure your UniOSS connection",
-            fontSize = 13.sp,
-            color = TextSecondary
-        )
+        Text("Settings", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = AccentCyan)
+        Text("Configure your UniOSS connection", fontSize = 13.sp, color = TextSecondary)
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Connection Settings
         SectionHeader(title = "Connection", icon = Icons.Default.Wifi)
-
         Spacer(modifier = Modifier.height(12.dp))
 
         Column(
@@ -65,8 +61,9 @@ fun SettingsScreen() {
                 onValueChange = {
                     baseUrl = it
                     connectionStatus = "untested"
+                    saveConfirmed = false
                 },
-                placeholder = { Text("http://10.0.2.2:8000", color = TextSecondary) },
+                placeholder = { Text("http://192.168.x.x:8000", color = TextSecondary) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -84,7 +81,6 @@ fun SettingsScreen() {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Test Connection Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -96,71 +92,76 @@ fun SettingsScreen() {
                         "failed" -> AccentRed
                         else -> TextSecondary
                     }
-                    val statusText = when (connectionStatus) {
-                        "connected" -> "Connected"
-                        "failed" -> "Unreachable"
-                        else -> "Not tested"
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(RoundedCornerShape(50))
-                            .background(statusColor)
-                    )
+                    Box(modifier = Modifier.size(8.dp).clip(RoundedCornerShape(50)).background(statusColor))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = statusText, fontSize = 12.sp, color = statusColor)
+                    Text(
+                        text = when (connectionStatus) {
+                            "connected" -> if (saveConfirmed) "Saved & Connected" else "Connected"
+                            "failed" -> "Unreachable"
+                            else -> "Not tested"
+                        },
+                        fontSize = 12.sp, color = statusColor
+                    )
                 }
-                Button(
-                    onClick = { connectionStatus = "connected" },
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentCyan.copy(alpha = 0.15f),
-                        contentColor = AccentCyan
-                    )
-                ) {
-                    Icon(Icons.Default.NetworkCheck, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Test Connection", fontSize = 13.sp)
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Save button
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                AppPreferences.setBackendUrl(context, baseUrl)
+                                saveConfirmed = true
+                            }
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentGreen.copy(alpha = 0.15f),
+                            contentColor = AccentGreen
+                        )
+                    ) {
+                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Save", fontSize = 13.sp)
+                    }
+
+                    // Test button
+                    Button(
+                        onClick = { connectionStatus = "connected" },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentCyan.copy(alpha = 0.15f),
+                            contentColor = AccentCyan
+                        )
+                    ) {
+                        Icon(Icons.Default.NetworkCheck, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Test", fontSize = 13.sp)
+                    }
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Refresh Interval
         SectionHeader(title = "Preferences", icon = Icons.Default.Tune)
-
         Spacer(modifier = Modifier.height(12.dp))
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(CardDark)
-                .padding(16.dp)
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(CardDark).padding(16.dp)
         ) {
             Text(text = "Auto Refresh Interval", fontSize = 12.sp, color = TextSecondary)
             Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("5s", "10s", "30s", "60s").forEach { interval ->
                     val isSelected = refreshInterval == interval
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(
-                                if (isSelected) AccentCyan.copy(alpha = 0.15f)
-                                else SurfaceDark
-                            )
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp))
+                            .background(if (isSelected) AccentCyan.copy(alpha = 0.15f) else SurfaceDark)
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = interval,
-                            fontSize = 13.sp,
+                            text = interval, fontSize = 13.sp,
                             color = if (isSelected) AccentCyan else TextSecondary,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                         )
@@ -171,17 +172,11 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // About Section
         SectionHeader(title = "About", icon = Icons.Default.Info)
-
         Spacer(modifier = Modifier.height(12.dp))
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(CardDark)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(CardDark).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             AboutRow(label = "App", value = "UniOSS Mobile")
@@ -195,17 +190,11 @@ fun SettingsScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Developer Info
         SectionHeader(title = "Developer", icon = Icons.Default.Code)
-
         Spacer(modifier = Modifier.height(12.dp))
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(CardDark)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(CardDark).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             AboutRow(label = "Built by", value = "Zeph")
