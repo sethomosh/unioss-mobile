@@ -1,6 +1,8 @@
 package com.example.unioss_mobile.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import com.example.unioss_mobile.navigation.Screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.navigation.NavController
@@ -78,9 +80,9 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel(), navController: 
         Text("Device Health", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
         Spacer(modifier = Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard(modifier = Modifier.weight(1f), title = "Total", value = "${devices.size}", icon = Icons.Default.Devices, accentColor = AccentCyan)
-            StatCard(modifier = Modifier.weight(1f), title = "Online", value = "$onlineCount", icon = Icons.Default.CheckCircle, accentColor = AccentGreen)
-            StatCard(modifier = Modifier.weight(1f), title = "Offline", value = "$offlineCount", icon = Icons.Default.Cancel, accentColor = AccentRed)
+            StatCard(modifier = Modifier.weight(1f), title = "Total", value = "${devices.size}", icon = Icons.Default.Devices, accentColor = AccentCyan, onClick = { navController?.navigate(Screen.Devices.route) })
+            StatCard(modifier = Modifier.weight(1f), title = "Online", value = "$onlineCount", icon = Icons.Default.CheckCircle, accentColor = AccentGreen, onClick = { navController?.navigate(Screen.Devices.route) })
+            StatCard(modifier = Modifier.weight(1f), title = "Offline", value = "$offlineCount", icon = Icons.Default.Cancel, accentColor = AccentRed, onClick = { navController?.navigate(Screen.Devices.route) })
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -97,8 +99,8 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel(), navController: 
         Text("Active Alerts", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
         Spacer(modifier = Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard(modifier = Modifier.weight(1f), title = "Critical", value = "${criticalAlerts.size}", icon = Icons.Default.Error, accentColor = AccentRed)
-            StatCard(modifier = Modifier.weight(1f), title = "Warnings", value = "${warningAlerts.size}", icon = Icons.Default.Warning, accentColor = AccentOrange)
+            StatCard(modifier = Modifier.weight(1f), title = "Critical", value = "${criticalAlerts.size}", icon = Icons.Default.Error, accentColor = AccentRed, onClick = { navController?.navigate(Screen.Alerts.route) })
+            StatCard(modifier = Modifier.weight(1f), title = "Warnings", value = "${warningAlerts.size}", icon = Icons.Default.Warning, accentColor = AccentOrange, onClick = { navController?.navigate(Screen.Alerts.route) })
         }
 
         if (criticalAlerts.isNotEmpty() || warningAlerts.isNotEmpty()) {
@@ -108,7 +110,8 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel(), navController: 
                     severity = alert.severity.uppercase(),
                     message = alert.message ?: "",
                     time = alert.timestamp ?: "",
-                    color = if (alert.severity.uppercase() == "CRITICAL") AccentRed else AccentOrange
+                    color = if (alert.severity.uppercase() == "CRITICAL") AccentRed else AccentOrange,
+                    onClick = { navController?.navigate(Screen.AlertDetail.createRoute(alert.id)) }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -136,12 +139,14 @@ fun StatCard(
     title: String,
     value: String,
     icon: ImageVector,
-    accentColor: Color
+    accentColor: Color,
+    onClick: () -> Unit = {}
 ) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .background(CardDark)
+            .clickable { onClick() }
             .padding(16.dp)
     ) {
         Column {
@@ -160,12 +165,13 @@ fun StatCard(
 }
 
 @Composable
-fun AlertRow(severity: String, message: String, time: String, color: Color) {
+fun AlertRow(severity: String, message: String, time: String, color: Color, onClick: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(CardDark)
+            .clickable { onClick() }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -182,9 +188,10 @@ fun AlertRow(severity: String, message: String, time: String, color: Color) {
             Text(text = message, fontSize = 13.sp, color = TextPrimary)
         }
         Text(text = time, fontSize = 11.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.width(8.dp))
+        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
     }
 }
-
 @Composable
 fun StatusRow(service: String, status: String, color: Color) {
     Row(

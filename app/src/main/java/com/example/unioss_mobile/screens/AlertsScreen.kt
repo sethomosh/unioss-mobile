@@ -1,8 +1,9 @@
 package com.example.unioss_mobile.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import com.example.unioss_mobile.navigation.Screen
 import androidx.navigation.NavController
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -108,8 +109,12 @@ fun AlertsScreen(viewModel: AlertsViewModel = viewModel(), navController: NavCon
                             Text("No alerts found", color = TextSecondary, fontSize = 14.sp)
                         }
                     } else {
-                        filteredAlerts.forEach { alert -> LiveAlertCard(alert = alert) }
-                    }
+                        filteredAlerts.forEach { alert ->
+                            LiveAlertCard(
+                                alert = alert,
+                                onClick = { navController?.navigate(Screen.AlertDetail.createRoute(alert.id)) }
+                            )
+                        }                    }
                 }
             }
         }
@@ -117,7 +122,7 @@ fun AlertsScreen(viewModel: AlertsViewModel = viewModel(), navController: NavCon
 }
 
 @Composable
-fun LiveAlertCard(alert: AlertResponse) {
+fun LiveAlertCard(alert: AlertResponse, onClick: () -> Unit = {}) {
     val severityColor = when (alert.severity.uppercase()) {
         "CRITICAL" -> AccentRed
         "WARNING" -> AccentOrange
@@ -130,6 +135,7 @@ fun LiveAlertCard(alert: AlertResponse) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(CardDark)
+            .clickable { onClick() }
             .padding(14.dp),
         verticalAlignment = Alignment.Top
     ) {

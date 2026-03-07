@@ -5,7 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-//import com.example.unioss_mobile.screens.AlertDetailScreen
+import com.example.unioss_mobile.screens.AlertDetailScreen
 import com.example.unioss_mobile.screens.AlertsScreen
 import com.example.unioss_mobile.screens.DashboardScreen
 import com.example.unioss_mobile.screens.DeviceDetailScreen
@@ -43,9 +43,9 @@ fun UniossNavGraph(navController: NavHostController, modifier: Modifier = Modifi
             val deviceIp = backStackEntry.arguments?.getString("deviceIp") ?: ""
             DeviceDetailScreen(deviceIp = deviceIp, navController = navController)
         }
-//        composable(Screen.AlertDetail.route) { backStackEntry ->
-//            val alertId = backStackEntry.arguments?.getString("alertId")?.toIntOrNull() ?: 0
-//            AlertDetailScreen(alertId = alertId, navController = navController)
-//        }
+        composable(Screen.AlertDetail.route) { backStackEntry ->
+            val alertId = backStackEntry.arguments?.getString("alertId")?.toIntOrNull() ?: 0
+           AlertDetailScreen(alertId = alertId, navController = navController)
+        }
     }
 }
