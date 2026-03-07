@@ -69,6 +69,14 @@ dependencies {
     //datastore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
+    implementation("com.patrykandpatrick.vico:compose:1.6.5")
+    implementation("com.patrykandpatrick.vico:compose-m3:1.6.5")
+    implementation("com.patrykandpatrick.vico:core:1.6.5")
+
+
+    implementation("com.patrykandpatrick.vico:compose:1.6.5")
+    implementation("com.patrykandpatrick.vico:compose-m3:1.6.5")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -3,6 +3,7 @@ package com.example.unioss_mobile.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.navigation.NavController
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -24,8 +25,7 @@ import com.example.unioss_mobile.utils.useAutoRefresh
 import com.example.unioss_mobile.viewmodel.DashboardViewModel
 
 @Composable
-fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
-    val devices by viewModel.devices.collectAsState()
+fun DashboardScreen(viewModel: DashboardViewModel = viewModel(), navController: NavController? = null) {    val devices by viewModel.devices.collectAsState()
     val alerts by viewModel.alerts.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 

@@ -5,11 +5,13 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.unioss_mobile.screens.DashboardScreen
-import com.example.unioss_mobile.screens.DevicesScreen
-import com.example.unioss_mobile.screens.TowersScreen
+//import com.example.unioss_mobile.screens.AlertDetailScreen
 import com.example.unioss_mobile.screens.AlertsScreen
+import com.example.unioss_mobile.screens.DashboardScreen
+import com.example.unioss_mobile.screens.DeviceDetailScreen
+import com.example.unioss_mobile.screens.DevicesScreen
 import com.example.unioss_mobile.screens.SettingsScreen
+import com.example.unioss_mobile.screens.TowersScreen
 
 sealed class Screen(val route: String, val label: String) {
     object Dashboard : Screen("dashboard", "Dashboard")
@@ -17,6 +19,12 @@ sealed class Screen(val route: String, val label: String) {
     object Towers : Screen("towers", "Towers")
     object Alerts : Screen("alerts", "Alerts")
     object Settings : Screen("settings", "Settings")
+    object DeviceDetail : Screen("device_detail/{deviceIp}", "Device Detail") {
+        fun createRoute(deviceIp: String) = "device_detail/$deviceIp"
+    }
+    object AlertDetail : Screen("alert_detail/{alertId}", "Alert Detail") {
+        fun createRoute(alertId: Int) = "alert_detail/$alertId"
+    }
 }
 
 @Composable
@@ -26,10 +34,18 @@ fun UniossNavGraph(navController: NavHostController, modifier: Modifier = Modifi
         startDestination = Screen.Dashboard.route,
         modifier = modifier
     ) {
-        composable(Screen.Dashboard.route) { DashboardScreen() }
-        composable(Screen.Devices.route) { DevicesScreen() }
-        composable(Screen.Towers.route) { TowersScreen() }
-        composable(Screen.Alerts.route) { AlertsScreen() }
+        composable(Screen.Dashboard.route) { DashboardScreen(navController = navController) }
+        composable(Screen.Devices.route) { DevicesScreen(navController = navController) }
+        composable(Screen.Towers.route) { TowersScreen(navController = navController) }
+        composable(Screen.Alerts.route) { AlertsScreen(navController = navController) }
         composable(Screen.Settings.route) { SettingsScreen() }
+        composable(Screen.DeviceDetail.route) { backStackEntry ->
+            val deviceIp = backStackEntry.arguments?.getString("deviceIp") ?: ""
+            DeviceDetailScreen(deviceIp = deviceIp, navController = navController)
+        }
+//        composable(Screen.AlertDetail.route) { backStackEntry ->
+//            val alertId = backStackEntry.arguments?.getString("alertId")?.toIntOrNull() ?: 0
+//            AlertDetailScreen(alertId = alertId, navController = navController)
+//        }
     }
 }

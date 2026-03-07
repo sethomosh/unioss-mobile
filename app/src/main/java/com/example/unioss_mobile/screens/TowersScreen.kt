@@ -2,6 +2,7 @@
 
     import androidx.compose.animation.AnimatedVisibility
     import androidx.compose.foundation.background
+    import androidx.navigation.NavController
     import androidx.compose.foundation.clickable
     import androidx.compose.foundation.layout.*
     import androidx.compose.foundation.rememberScrollState
@@ -25,7 +26,7 @@
     import com.example.unioss_mobile.data.model.DeviceResponse
 
     @Composable
-    fun TowersScreen(viewModel: TowersViewModel = viewModel()) {
+    fun TowersScreen(viewModel: TowersViewModel = viewModel(), navController: NavController? = null) {
         val towers by viewModel.towers.collectAsState()
         val isLoading by viewModel.isLoading.collectAsState()
         val error by viewModel.error.collectAsState()

@@ -2,6 +2,7 @@ package com.example.unioss_mobile.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.navigation.NavController
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,8 +25,7 @@ import com.example.unioss_mobile.utils.useAutoRefresh
 import com.example.unioss_mobile.viewmodel.AlertsViewModel
 
 @Composable
-fun AlertsScreen(viewModel: AlertsViewModel = viewModel()) {
-    val alerts by viewModel.alerts.collectAsState()
+fun AlertsScreen(viewModel: AlertsViewModel = viewModel(), navController: NavController? = null) {    val alerts by viewModel.alerts.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val tabs = listOf("All", "Critical", "Warning", "Cleared")

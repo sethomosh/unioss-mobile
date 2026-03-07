@@ -1,6 +1,7 @@
 package com.example.unioss_mobile.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,20 +18,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.example.unioss_mobile.data.model.DeviceResponse
+import com.example.unioss_mobile.navigation.Screen
 import com.example.unioss_mobile.ui.theme.*
 import com.example.unioss_mobile.utils.useAutoRefresh
 import com.example.unioss_mobile.viewmodel.DevicesViewModel
 
 @Composable
-fun DevicesScreen(viewModel: DevicesViewModel = viewModel()) {
+fun DevicesScreen(
+    viewModel: DevicesViewModel = viewModel(),
+    navController: NavController? = null
+) {
     val devices by viewModel.devices.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val searchQuery = remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) { viewModel.fetchDevices() }
-
     useAutoRefresh(intervalMs = 10_000L) { viewModel.fetchDevices() }
 
     val filteredDevices = devices.filter {
@@ -45,13 +50,7 @@ fun DevicesScreen(viewModel: DevicesViewModel = viewModel()) {
             .background(BackgroundDark)
             .padding(16.dp)
     ) {
-        // Header
-        Text(
-            text = "Devices",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = AccentCyan
-        )
+        Text("Devices", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = AccentCyan)
         Text(
             text = "${devices.count { it.online }} online · ${devices.count { !it.online }} offline",
             fontSize = 13.sp,
@@ -60,7 +59,6 @@ fun DevicesScreen(viewModel: DevicesViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Search Bar
         OutlinedTextField(
             value = searchQuery.value,
             onValueChange = { searchQuery.value = it },
@@ -105,7 +103,14 @@ fun DevicesScreen(viewModel: DevicesViewModel = viewModel()) {
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     filteredDevices.forEach { device ->
-                        LiveDeviceCard(device = device)
+                        LiveDeviceCard(
+                            device = device,
+                            onClick = {
+                                device.device_ip?.let { ip ->
+                                    navController?.navigate(Screen.DeviceDetail.createRoute(ip))
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -114,7 +119,7 @@ fun DevicesScreen(viewModel: DevicesViewModel = viewModel()) {
 }
 
 @Composable
-fun LiveDeviceCard(device: DeviceResponse) {
+fun LiveDeviceCard(device: DeviceResponse, onClick: () -> Unit = {}) {
     val statusColor = if (device.online) AccentGreen else AccentRed
     val statusLabel = if (device.online) "UP" else "DOWN"
 
@@ -123,6 +128,7 @@ fun LiveDeviceCard(device: DeviceResponse) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(CardDark)
+            .clickable { onClick() }
             .padding(14.dp)
     ) {
         Row(
