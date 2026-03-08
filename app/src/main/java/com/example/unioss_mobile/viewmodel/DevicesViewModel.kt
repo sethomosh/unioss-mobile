@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.unioss_mobile.data.model.DeviceResponse
 import com.example.unioss_mobile.data.network.RetrofitClient
 import com.example.unioss_mobile.utils.AppPreferences
+import com.example.unioss_mobile.utils.MockDataProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -34,7 +35,10 @@ class DevicesViewModel(application: Application) : AndroidViewModel(application)
                 _devices.value = RetrofitClient.getInstance().getDevices()
             } catch (e: Exception) {
                 android.util.Log.e("DEBUG_URL", "Error: ${e.javaClass.name} - ${e.message}")
-                _error.value = "Failed to load devices: ${e.message}"
+                if (_devices.value.isEmpty()) {
+                    _devices.value = MockDataProvider.devices
+                    _error.value = "DEMO_MODE"
+                }
             } finally {
                 _isLoading.value = false
             }

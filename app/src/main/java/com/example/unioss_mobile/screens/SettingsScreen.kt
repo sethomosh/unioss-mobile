@@ -17,16 +17,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import com.example.unioss_mobile.navigation.Screen
 import com.example.unioss_mobile.ui.theme.*
 import com.example.unioss_mobile.utils.AppPreferences
+import com.example.unioss_mobile.utils.SessionManager
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(navController: NavController? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     val savedUrl by AppPreferences.getBackendUrl(context).collectAsState(initial = AppPreferences.DEFAULT_URL)
+    val role by SessionManager.getRole(context).collectAsState(initial = SessionManager.ROLE_NONE)
     var baseUrl by remember(savedUrl) { mutableStateOf(savedUrl) }
     var refreshInterval by remember { mutableStateOf("10s") }
     var connectionStatus by remember { mutableStateOf("untested") }
@@ -41,6 +45,64 @@ fun SettingsScreen() {
     ) {
         Text("Settings", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = AccentCyan)
         Text("Configure your UniOSS connection", fontSize = 13.sp, color = TextSecondary)
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Session Card
+        SectionHeader(title = "Session", icon = Icons.Default.AccountCircle)
+        Spacer(modifier = Modifier.height(12.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(CardDark)
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(text = "Signed in as", fontSize = 12.sp, color = TextSecondary)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (role == SessionManager.ROLE_ADMIN) Icons.Default.AdminPanelSettings else Icons.Default.Person,
+                            contentDescription = null,
+                            tint = if (role == SessionManager.ROLE_ADMIN) AccentCyan else AccentGreen,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (role == SessionManager.ROLE_ADMIN) "Administrator" else "Guest",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (role == SessionManager.ROLE_ADMIN) AccentCyan else AccentGreen
+                        )
+                    }
+                }
+                Button(
+                    onClick = {
+                        scope.launch {
+                            SessionManager.logout(context)
+                            navController?.navigate(Screen.Login.route) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AccentRed.copy(alpha = 0.15f),
+                        contentColor = AccentRed
+                    )
+                ) {
+                    Icon(Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Logout", fontSize = 13.sp)
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -105,7 +167,6 @@ fun SettingsScreen() {
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Save button
                     Button(
                         onClick = {
                             scope.launch {
@@ -124,7 +185,6 @@ fun SettingsScreen() {
                         Text("Save", fontSize = 13.sp)
                     }
 
-                    // Test button
                     Button(
                         onClick = { connectionStatus = "connected" },
                         shape = RoundedCornerShape(10.dp),
@@ -211,19 +271,9 @@ fun SettingsScreen() {
 @Composable
 fun SectionHeader(title: String, icon: ImageVector) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = AccentCyan,
-            modifier = Modifier.size(18.dp)
-        )
+        Icon(imageVector = icon, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = title,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary
-        )
+        Text(text = title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
     }
 }
 

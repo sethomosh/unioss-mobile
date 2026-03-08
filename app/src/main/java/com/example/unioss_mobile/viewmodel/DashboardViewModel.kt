@@ -1,6 +1,7 @@
 package com.example.unioss_mobile.viewmodel
 
 import android.app.Application
+import com.example.unioss_mobile.utils.MockDataProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.unioss_mobile.data.model.AlertResponse
@@ -36,8 +37,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 _devices.value = RetrofitClient.getInstance().getDevices()
                 _alerts.value = RetrofitClient.getInstance().getAlerts()
             } catch (e: Exception) {
-                _error.value = "Failed to load dashboard: ${e.message}"
-            } finally {
+                if (_devices.value.isEmpty()) {
+                    _devices.value = MockDataProvider.devices
+                    _alerts.value = MockDataProvider.alerts
+                    _error.value = "DEMO_MODE"
+                }
+            }finally {
                 _isLoading.value = false
             }
         }

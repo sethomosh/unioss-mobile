@@ -1,11 +1,11 @@
 package com.example.unioss_mobile.screens
 
 import androidx.compose.foundation.background
-import com.example.unioss_mobile.navigation.Screen
-import androidx.navigation.NavController
 import androidx.compose.foundation.clickable
+import com.example.unioss_mobile.navigation.Screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.navigation.NavController
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -26,7 +26,8 @@ import com.example.unioss_mobile.utils.useAutoRefresh
 import com.example.unioss_mobile.viewmodel.AlertsViewModel
 
 @Composable
-fun AlertsScreen(viewModel: AlertsViewModel = viewModel(), navController: NavController? = null) {    val alerts by viewModel.alerts.collectAsState()
+fun AlertsScreen(viewModel: AlertsViewModel = viewModel(), navController: NavController? = null) {
+    val alerts by viewModel.alerts.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val tabs = listOf("All", "Critical", "Warning", "Cleared")
@@ -36,8 +37,8 @@ fun AlertsScreen(viewModel: AlertsViewModel = viewModel(), navController: NavCon
     useAutoRefresh(intervalMs = 10_000L) { viewModel.fetchAlerts() }
 
     val filteredAlerts = when (selectedTab) {
-        1 -> alerts.filter { it.severity.uppercase() == "CRITICAL" }
-        2 -> alerts.filter { it.severity.uppercase() == "WARNING" }
+        1 -> alerts.filter { it.severity?.uppercase() == "CRITICAL" }
+        2 -> alerts.filter { it.severity?.uppercase() == "WARNING" }
         3 -> alerts.filter { it.acknowledged }
         else -> alerts
     }
@@ -54,7 +55,22 @@ fun AlertsScreen(viewModel: AlertsViewModel = viewModel(), navController: NavCon
             fontSize = 13.sp,
             color = TextSecondary
         )
-
+        if (error == "DEMO_MODE") {
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(AccentOrange.copy(alpha = 0.15f))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Info, contentDescription = null, tint = AccentOrange, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Demo Mode — connect a backend to see live data", fontSize = 12.sp, color = AccentOrange)
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -85,7 +101,7 @@ fun AlertsScreen(viewModel: AlertsViewModel = viewModel(), navController: NavCon
                     CircularProgressIndicator(color = AccentCyan)
                 }
             }
-            error != null && alerts.isEmpty() -> {
+            error != null && error != "DEMO_MODE" && alerts.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.WifiOff, contentDescription = null, tint = AccentRed, modifier = Modifier.size(48.dp))
@@ -114,7 +130,8 @@ fun AlertsScreen(viewModel: AlertsViewModel = viewModel(), navController: NavCon
                                 alert = alert,
                                 onClick = { navController?.navigate(Screen.AlertDetail.createRoute(alert.id)) }
                             )
-                        }                    }
+                        }
+                    }
                 }
             }
         }
@@ -123,7 +140,7 @@ fun AlertsScreen(viewModel: AlertsViewModel = viewModel(), navController: NavCon
 
 @Composable
 fun LiveAlertCard(alert: AlertResponse, onClick: () -> Unit = {}) {
-    val severityColor = when (alert.severity.uppercase()) {
+    val severityColor = when (alert.severity?.uppercase()) {
         "CRITICAL" -> AccentRed
         "WARNING" -> AccentOrange
         else -> AccentCyan
@@ -160,13 +177,13 @@ fun LiveAlertCard(alert: AlertResponse, onClick: () -> Unit = {}) {
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        text = alert.severity.uppercase(),
+                        text = alert.severity?.uppercase() ?: "INFO",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (isCleared) severityColor.copy(alpha = 0.5f) else severityColor
                     )
                 }
-                Text(text = alert.timestamp, fontSize = 11.sp, color = TextSecondary)
+                Text(text = alert.timestamp ?: "", fontSize = 11.sp, color = TextSecondary)
             }
             Spacer(modifier = Modifier.height(6.dp))
             Text(

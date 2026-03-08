@@ -1,6 +1,7 @@
 package com.example.unioss_mobile.viewmodel
 
 import android.app.Application
+import com.example.unioss_mobile.utils.MockDataProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.unioss_mobile.data.model.AlertResponse
@@ -31,8 +32,11 @@ class AlertsViewModel(application: Application) : AndroidViewModel(application) 
                 RetrofitClient.baseUrl = if (url.endsWith("/")) url else "$url/"
                 _alerts.value = RetrofitClient.getInstance().getAlerts()
             } catch (e: Exception) {
-                _error.value = "Failed to load alerts: ${e.message}"
-            } finally {
+                if (_alerts.value.isEmpty()) {
+                    _alerts.value = MockDataProvider.alerts
+                    _error.value = "DEMO_MODE"
+                }
+            }  finally {
                 _isLoading.value = false
             }
         }

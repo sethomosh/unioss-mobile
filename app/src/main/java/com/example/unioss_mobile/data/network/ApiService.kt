@@ -21,14 +21,14 @@ interface ApiService {
     @POST("api/alerts/{alertId}/acknowledge")
     suspend fun acknowledgeAlert(@Path("alertId") alertId: Int): Any
 
-    @GET("api/devices/{deviceIp}/details")
+    @GET("api/discovery/devices/{deviceIp}/details")
     suspend fun getDeviceDetails(
         @Path("deviceIp") deviceIp: String,
         @Query("perf_limit") perfLimit: Int = 50,
         @Query("traffic_limit") trafficLimit: Int = 50
     ): DeviceDetailsResponse
 
-    @GET("api/towers/list")
+    @GET("api/towers")
     suspend fun getTowers(): List<TowerResponse>
 
     @GET("api/signals/latest")

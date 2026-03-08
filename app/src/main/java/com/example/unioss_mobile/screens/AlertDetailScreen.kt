@@ -22,6 +22,7 @@ import com.example.unioss_mobile.data.network.RetrofitClient
 import com.example.unioss_mobile.navigation.Screen
 import com.example.unioss_mobile.ui.theme.*
 import com.example.unioss_mobile.utils.AppPreferences
+import com.example.unioss_mobile.utils.SessionManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -29,6 +30,9 @@ import kotlinx.coroutines.launch
 fun AlertDetailScreen(alertId: Int, navController: NavController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val role by SessionManager.getRole(context).collectAsState(initial = SessionManager.ROLE_NONE)
+    val isAdmin = role == SessionManager.ROLE_ADMIN
+
     var alert by remember { mutableStateOf<AlertResponse?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var isAcknowledging by remember { mutableStateOf(false) }
@@ -55,7 +59,6 @@ fun AlertDetailScreen(alertId: Int, navController: NavController) {
             .fillMaxSize()
             .background(BackgroundDark)
     ) {
-        // Top Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -68,6 +71,30 @@ fun AlertDetailScreen(alertId: Int, navController: NavController) {
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text("Alert Detail", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Spacer(modifier = Modifier.weight(1f))
+            // Role badge
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background((if (isAdmin) AccentCyan else AccentGreen).copy(alpha = 0.15f))
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (isAdmin) Icons.Default.AdminPanelSettings else Icons.Default.Person,
+                        contentDescription = null,
+                        tint = if (isAdmin) AccentCyan else AccentGreen,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (isAdmin) "Admin" else "Guest",
+                        fontSize = 10.sp,
+                        color = if (isAdmin) AccentCyan else AccentGreen,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
         }
 
         when {
@@ -92,7 +119,7 @@ fun AlertDetailScreen(alertId: Int, navController: NavController) {
             }
             else -> {
                 val a = alert!!
-                val severityColor = when (a.severity.uppercase()) {
+                val severityColor = when (a.severity?.uppercase()) {
                     "CRITICAL" -> AccentRed
                     "WARNING" -> AccentOrange
                     else -> AccentCyan
@@ -116,7 +143,7 @@ fun AlertDetailScreen(alertId: Int, navController: NavController) {
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = when (a.severity.uppercase()) {
+                                imageVector = when (a.severity?.uppercase()) {
                                     "CRITICAL" -> Icons.Default.Error
                                     "WARNING" -> Icons.Default.Warning
                                     else -> Icons.Default.Info
@@ -128,7 +155,7 @@ fun AlertDetailScreen(alertId: Int, navController: NavController) {
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    text = a.severity.uppercase(),
+                                    text = a.severity?.uppercase() ?: "INFO",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = severityColor
@@ -147,7 +174,7 @@ fun AlertDetailScreen(alertId: Int, navController: NavController) {
                         InfoRow("Alert ID", "#${a.id}")
                         InfoRow("Device", a.device_ip ?: "—")
                         InfoRow("Category", a.category ?: "—")
-                        InfoRow("Severity", a.severity.uppercase())
+                        InfoRow("Severity", a.severity?.uppercase() ?: "INFO")
                         InfoRow("Time", a.timestamp ?: "—")
                         InfoRow("Status", if (isAcknowledged) "Acknowledged" else "Active")
                     }
@@ -162,40 +189,50 @@ fun AlertDetailScreen(alertId: Int, navController: NavController) {
                         )
                     }
 
-                    // Actions
+                    // Acknowledge Action
                     if (!isAcknowledged) {
                         Button(
                             onClick = {
-                                scope.launch {
-                                    isAcknowledging = true
-                                    try {
-                                        val url = AppPreferences.getBackendUrl(context).first()
-                                        RetrofitClient.baseUrl = if (url.endsWith("/")) url else "$url/"
-                                        RetrofitClient.getInstance().acknowledgeAlert(a.id)
-                                        acknowledgeSuccess = true
-                                    } catch (e: Exception) {
-                                        error = "Failed to acknowledge: ${e.message}"
-                                    } finally {
-                                        isAcknowledging = false
+                                if (isAdmin) {
+                                    scope.launch {
+                                        isAcknowledging = true
+                                        try {
+                                            val url = AppPreferences.getBackendUrl(context).first()
+                                            RetrofitClient.baseUrl = if (url.endsWith("/")) url else "$url/"
+                                            RetrofitClient.getInstance().acknowledgeAlert(a.id)
+                                            acknowledgeSuccess = true
+                                        } catch (e: Exception) {
+                                            error = "Failed to acknowledge: ${e.message}"
+                                        } finally {
+                                            isAcknowledging = false
+                                        }
                                     }
                                 }
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = AccentGreen.copy(alpha = 0.15f),
-                                contentColor = AccentGreen
+                                containerColor = if (isAdmin) AccentGreen.copy(alpha = 0.15f) else SurfaceDark,
+                                contentColor = if (isAdmin) AccentGreen else TextSecondary
                             ),
-                            enabled = !isAcknowledging
+                            enabled = isAdmin && !isAcknowledging
                         ) {
                             if (isAcknowledging) {
                                 CircularProgressIndicator(color = AccentGreen, modifier = Modifier.size(16.dp))
                             } else {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Icon(
+                                    imageVector = if (isAdmin) Icons.Default.CheckCircle else Icons.Default.Lock,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (isAcknowledging) "Acknowledging..." else "Acknowledge Alert",
+                                text = when {
+                                    isAcknowledging -> "Acknowledging..."
+                                    !isAdmin -> "Admin access required"
+                                    else -> "Acknowledge Alert"
+                                },
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.SemiBold
                             )

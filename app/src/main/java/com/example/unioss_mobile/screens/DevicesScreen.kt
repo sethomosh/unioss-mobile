@@ -56,6 +56,22 @@ fun DevicesScreen(
             fontSize = 13.sp,
             color = TextSecondary
         )
+        if (error == "DEMO_MODE") {
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(AccentOrange.copy(alpha = 0.15f))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Info, contentDescription = null, tint = AccentOrange, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Demo Mode — connect a backend to see live data", fontSize = 12.sp, color = AccentOrange)
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -86,8 +102,7 @@ fun DevicesScreen(
                     CircularProgressIndicator(color = AccentCyan)
                 }
             }
-            error != null && devices.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            error != null && error != "DEMO_MODE" && devices.isEmpty() -> {                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.WifiOff, contentDescription = null, tint = AccentRed, modifier = Modifier.size(48.dp))
                         Spacer(modifier = Modifier.height(12.dp))

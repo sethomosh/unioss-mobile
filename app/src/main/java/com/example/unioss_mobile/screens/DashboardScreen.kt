@@ -27,19 +27,20 @@ import com.example.unioss_mobile.utils.useAutoRefresh
 import com.example.unioss_mobile.viewmodel.DashboardViewModel
 
 @Composable
-fun DashboardScreen(viewModel: DashboardViewModel = viewModel(), navController: NavController? = null) {    val devices by viewModel.devices.collectAsState()
+fun DashboardScreen(viewModel: DashboardViewModel = viewModel(), navController: NavController? = null) {
+    val devices by viewModel.devices.collectAsState()
     val alerts by viewModel.alerts.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+
 
     LaunchedEffect(Unit) { viewModel.fetchData() }
     useAutoRefresh(intervalMs = 10_000L) { viewModel.fetchData() }
 
     val onlineCount = devices.count { it.online }
     val offlineCount = devices.count { !it.online }
-    val criticalAlerts = alerts.filter { it.severity.uppercase() == "CRITICAL" && !it.acknowledged }
-    val warningAlerts = alerts.filter { it.severity.uppercase() == "WARNING" && !it.acknowledged }
-    val totalInbound = devices.sumOf { d -> d.interfaces.sumOf { it.inbound_kbps } }
-    val totalOutbound = devices.sumOf { d -> d.interfaces.sumOf { it.outbound_kbps } }
+    val criticalAlerts = alerts.filter { it.severity?.uppercase() == "CRITICAL" && !it.acknowledged }
+    val warningAlerts = alerts.filter { it.severity?.uppercase() == "WARNING" && !it.acknowledged }
 
     Column(
         modifier = Modifier
@@ -60,6 +61,22 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel(), navController: 
                     fontSize = 13.sp,
                     color = TextSecondary
                 )
+                if (error == "DEMO_MODE") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(AccentOrange.copy(alpha = 0.15f))
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Info, contentDescription = null, tint = AccentOrange, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Demo Mode — connect a backend to see live data", fontSize = 12.sp, color = AccentOrange)
+                        }
+                    }
+                }
             }
             Box(
                 modifier = Modifier
@@ -87,15 +104,6 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel(), navController: 
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text("Bandwidth Usage", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard(modifier = Modifier.weight(1f), title = "Inbound", value = "${"%.1f".format(totalInbound / 1000)} Mbps", icon = Icons.Default.ArrowDownward, accentColor = AccentCyan)
-            StatCard(modifier = Modifier.weight(1f), title = "Outbound", value = "${"%.1f".format(totalOutbound / 1000)} Mbps", icon = Icons.Default.ArrowUpward, accentColor = AccentGreen)
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
         Text("Active Alerts", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
         Spacer(modifier = Modifier.height(12.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -107,10 +115,10 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel(), navController: 
             Spacer(modifier = Modifier.height(12.dp))
             (criticalAlerts.take(2) + warningAlerts.take(2)).forEach { alert ->
                 AlertRow(
-                    severity = alert.severity.uppercase(),
+                    severity = alert.severity?.uppercase() ?: "INFO",
                     message = alert.message ?: "",
                     time = alert.timestamp ?: "",
-                    color = if (alert.severity.uppercase() == "CRITICAL") AccentRed else AccentOrange,
+                    color = if (alert.severity?.uppercase() == "CRITICAL") AccentRed else AccentOrange,
                     onClick = { navController?.navigate(Screen.AlertDetail.createRoute(alert.id)) }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -192,6 +200,7 @@ fun AlertRow(severity: String, message: String, time: String, color: Color, onCl
         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
     }
 }
+
 @Composable
 fun StatusRow(service: String, status: String, color: Color) {
     Row(
