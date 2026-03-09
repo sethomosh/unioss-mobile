@@ -1,6 +1,10 @@
 # UniOSS Mobile 📡
-
+UniOSS Mobile is a lightweight Android client for monitoring network telemetry from the UniOSS SNMP-based monitoring platform.
 A native Android companion app for the **UniOSS Network Management System** — a real-time network monitoring platform built to track wireless devices, signal quality, and network health across a PTMP (Point-to-Multipoint) infrastructure.
+
+Traditional network monitoring dashboards are typically desktop-based.
+This project explores how mobile clients can provide quick access to network telemetry and alerts for administrators on the move.
+
 
 Built in **Kotlin + Jetpack Compose** as part of a full-stack network monitoring suite.
 
@@ -9,8 +13,12 @@ Built in **Kotlin + Jetpack Compose** as part of a full-stack network monitoring
 ## Screenshots
 
 > Dashboard | Devices | Towers | Alerts | Settings
+![dashboard](https://github.com/user-attachments/assets/ef4da4be-05c7-46e8-946a-991f657dfb7f)
+![devices](https://github.com/user-attachments/assets/f46ec373-7962-4fd9-8119-198e0974e8fd)
+![towers](https://github.com/user-attachments/assets/2cf864e7-d2ac-4b31-ac6e-7b1dff5efafc)
+![alerts](https://github.com/user-attachments/assets/08b3b18f-85cf-4719-92b9-ccaa59fd0b01)
+![settings](https://github.com/user-attachments/assets/80d97ef3-74c7-4336-a3c0-f904ba823d70)
 
-*(screenshots coming soon)*
 
 ---
 
@@ -76,4 +84,4 @@ Backend repo: [unioss](https://github.com/sethomosh)
 
 ## Developer
 
-Built by **Zeph** — [github.com/sethomosh](https://github.com/sethomosh)
+Built by **seth** — [github.com/sethomosh](https://github.com/sethomosh)
